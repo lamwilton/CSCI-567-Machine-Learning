@@ -22,7 +22,6 @@ def linear_regression_noreg(X, y):
   #####################################################
   #				 YOUR CODE HERE					                    #
   #####################################################
-  #alskjdlaksjdlkajsdlkajlskfja
   trans = np.transpose(X)
   inverse = np.linalg.inv(trans @ X)
   w = inverse @ trans @ y
