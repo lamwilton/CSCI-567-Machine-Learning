@@ -40,19 +40,17 @@ def binary_train(X, y, w0=None, b0=None, step_size=0.5, max_iterations=1000):
         b = b0
 
     y = np.asarray(y)
-    y[y == 0] = -1
     for i in range(0, max_iterations):
         gradientw = np.zeros(D)
         gradientb = 0
         for n in range(0, N):
-            z = y[n] * np.transpose(w) @ X[n, :] + y[n] * b
-            gradientw = gradientw - (np.exp(-z) / (1 + np.exp(-z)) * y[n] * X[n, :])
-            gradientb = gradientb - (np.exp(-z) / (1 + np.exp(-z)) * y[n])
+            z = np.transpose(w) @ X[n, :] + b
+            gradientw = gradientw - ((np.exp(-z) / (1 + np.exp(-z)) - y[n]) * X[n, :])
+            gradientb = gradientb - (np.exp(-z) / (1 + np.exp(-z)) - y[n])
         gradientw = gradientw / N
         gradientb = gradientb / N
         w = w - step_size * gradientw
         b = b - step_size * gradientb
-    y[y == -1] = 0
 
     assert w.shape == (D,)
     return w, b
@@ -71,8 +69,8 @@ def binary_predict(X, w, b):
     preds = np.zeros(N) 
 
     ypred = X @ w + b
-    preds = np.sign(ypred)
-    preds[preds == -1] = 0
+    preds[ypred < 0] = 1
+    preds[ypred >= 0] = 0
 
     assert preds.shape == (N,) 
     return preds
@@ -239,7 +237,7 @@ def OVR_predict(X, w, b):
     ypred = np.zeros([N, C])
     for i in range(0, C):
         ypred[:, i] = X @ np.transpose(w[i, :]) + b[i]
-    preds = np.argmax(ypred, axis=1)
+    preds = np.argmin(ypred, axis=1)
 
     assert preds.shape == (N,)
     return preds
