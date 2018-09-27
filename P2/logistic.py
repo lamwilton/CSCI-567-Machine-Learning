@@ -43,7 +43,20 @@ def binary_train(X, y, w0=None, b0=None, step_size=0.5, max_iterations=1000):
     """
     TODO: add your code here
     """
-
+    y = np.asarray(y)
+    y[y == 0] = -1
+    for i in range(0, max_iterations):
+        gradientw = np.zeros(D)
+        gradientb = 0
+        for n in range(0, N):
+            z = y[n] * np.transpose(w) @ X[n, :] + y[n] * b
+            gradientw = gradientw - (np.exp(-z) / (1 + np.exp(-z)) * y[n] * X[n, :])
+            gradientb = gradientb - (np.exp(-z) / (1 + np.exp(-z)) * y[n])
+        gradientw = gradientw / N
+        gradientb = gradientb / N
+        w = w - step_size * gradientw
+        b = b - step_size * gradientb
+    y[y == -1] = 0
     assert w.shape == (D,)
     return w, b
 
@@ -63,7 +76,11 @@ def binary_predict(X, w, b):
 
     """
     TODO: add your code here
-    """      
+    """
+    ypred = X @ w + b
+    preds = np.sign(ypred)
+    preds[preds == -1] = 0
+
     assert preds.shape == (N,) 
     return preds
 
@@ -112,6 +129,24 @@ def multinomial_train(X, y, C,
     """
     TODO: add your code here
     """
+    y = np.asarray(y)
+    for i in range(0, max_iterations):
+        gradientw = np.zeros((C, D))
+        gradientb = np.zeros(C)
+        for n in range(0, N):
+            a = np.zeros(C)
+            dlda = np.zeros(C)
+            a = w @ np.transpose(X[n, :]) + b
+            atil = a - np.max(a)
+            for c in range(0, C):
+                dlda[c] = dlda[c] + np.exp(atil[c])/np.array([np.exp(atil[c]) for c in range(0, C)]).sum()
+            dlda[y[n]] = dlda[y[n]] - 1
+            gradientw = gradientw + np.outer(dlda, X[n, :])
+            gradientb = gradientb + dlda
+        gradientw = gradientw / N
+        gradientb = gradientb / N
+        w = w - step_size * gradientw
+        b = b - step_size * gradientb
 
     assert w.shape == (C, D)
     assert b.shape == (C,)
@@ -139,8 +174,15 @@ def multinomial_predict(X, w, b):
 
     """
     TODO: add your code here
-    """   
-
+    """
+    ypred = np.zeros((N, C))
+    for n in range(0, N):
+        a = np.zeros(C)
+        a = w @ np.transpose(X[n, :]) + b
+        atil = a - np.max(a)
+        for c in range(0, C):
+            ypred[n, c] = np.exp(atil[c])/np.array([np.exp(atil[c]) for c in range(0, C)]).sum()
+    preds = np.argmax(ypred, axis=1)
     assert preds.shape == (N,)
     return preds
 
@@ -179,6 +221,12 @@ def OVR_train(X, y, C, w0=None, b0=None, step_size=0.5, max_iterations=1000):
     """
     TODO: add your code here
     """
+    y = np.asarray(y)
+    for i in range(0, C):
+        ytemp = np.zeros(N).astype(int)
+        ytemp[y == i] = 1
+        w[i, :], b[i] = binary_train(X, ytemp)
+
     assert w.shape == (C, D), 'wrong shape of weights matrix'
     assert b.shape == (C,), 'wrong shape of bias terms vector'
     return w, b
@@ -207,6 +255,10 @@ def OVR_predict(X, w, b):
     """
     TODO: add your code here
     """
+    ypred = np.zeros([N, C])
+    for i in range(0, C):
+        ypred[:, i] = X @ np.transpose(w[i, :]) + b[i]
+    preds = np.argmax(ypred, axis=1)
 
     assert preds.shape == (N,)
     return preds
@@ -237,7 +289,7 @@ def run_binary():
     print('train acc: %f, test acc: %f' % 
             (accuracy_score(y_train, train_preds),
              accuracy_score(y_test, preds)))
-    
+
     print('Performing binary classification on binarized MNIST')
     X_train, X_test, y_train, y_test = data_loader_mnist()
 
@@ -257,9 +309,9 @@ def run_multiclass():
                             toy_data_multiclass_5_classes, \
                             data_loader_mnist 
     
-    datasets = [(toy_data_multiclass_3_classes_non_separable(), 
+    datasets = [(toy_data_multiclass_3_classes_non_separable(),
                         'Synthetic data', 3), 
-                (toy_data_multiclass_5_classes(), 'Synthetic data', 5), 
+                (toy_data_multiclass_5_classes(), 'Synthetic data', 5),
                 (data_loader_mnist(), 'MNIST', 10)]
 
     for data, name, num_classes in datasets:
@@ -270,7 +322,7 @@ def run_multiclass():
         w, b = OVR_train(X_train, y_train, C=num_classes)
         train_preds = OVR_predict(X_train, w=w, b=b)
         preds = OVR_predict(X_test, w=w, b=b)
-        print('train acc: %f, test acc: %f' % 
+        print('train acc: %f, test acc: %f' %
             (accuracy_score(y_train, train_preds),
              accuracy_score(y_test, preds)))
     
