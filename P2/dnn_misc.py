@@ -65,7 +65,7 @@ class linear_layer:
         # TODO: Implement the linear forward pass. Store the result in forward_output  #
         ################################################################################
 
-        forward_output = X @ self.params['W'] + np.repeat(self.params['b'], np.size(X, 0), axis=0)
+        forward_output = X @ self.params['W'] + self.params['b']
 
         return forward_output
 
@@ -100,7 +100,7 @@ class linear_layer:
         # only return backward_output, but need to compute self.gradient['W'] and self.gradient['b']                             #
         ##########################################################################################################################
         self.gradient['W'] = np.transpose(X) @ grad
-        self.gradient['b'] = grad
+        self.gradient['b'] = np.transpose(grad) @ np.ones(np.size(grad, 0))
         backward_output = grad @ np.transpose(self.params['W'])
 
         return backward_output
@@ -173,7 +173,7 @@ class relu:
         # PLEASE follow the Heaviside step function defined in CSCI567_HW2.pdf                                                   #
         ##########################################################################################################################
 
-        backward_output = np.multiply(1. * (X > 0).astype(float), grad)
+        backward_output = np.multiply(1. * (X >= 0).astype(float), grad)
 
         return backward_output
 
