@@ -65,6 +65,8 @@ class linear_layer:
         # TODO: Implement the linear forward pass. Store the result in forward_output  #
         ################################################################################
 
+        forward_output = X @ self.params['W'] + np.repeat(self.params['b'], np.size(X, 0), axis=0)
+
         return forward_output
 
     def backward(self, X, grad):
@@ -97,6 +99,9 @@ class linear_layer:
         # backward_output = ? (N-by-input_D numpy array, the gradient of the mini-batch loss w.r.t. X)                           #
         # only return backward_output, but need to compute self.gradient['W'] and self.gradient['b']                             #
         ##########################################################################################################################
+        self.gradient['W'] = np.transpose(X) @ grad
+        self.gradient['b'] = grad
+        backward_output = grad @ np.transpose(self.params['W'])
 
         return backward_output
 
@@ -136,6 +141,7 @@ class relu:
         ################################################################################
         # TODO: Implement the relu forward pass. Store the result in forward_output    #
         ################################################################################
+        forward_output = X * (X > 0).astype(float)
 
         return forward_output
 
@@ -166,6 +172,8 @@ class relu:
         # backward_output = ? (A numpy array of the shape of X, the gradient of the mini-batch loss w.r.t. X)                    #
         # PLEASE follow the Heaviside step function defined in CSCI567_HW2.pdf                                                   #
         ##########################################################################################################################
+
+        backward_output = np.multiply(1. * (X > 0).astype(float), grad)
 
         return backward_output
 
@@ -244,6 +252,8 @@ class dropout:
         # backward_output = ? (A numpy array of the shape of X, the gradient of the mini-batch loss w.r.t. X)                    #
         # PLEASE follow the formula shown in the homework pdf                                                                    #
         ##########################################################################################################################
+
+        backward_output = np.multiply(grad, self.mask)
 
         return backward_output
 
