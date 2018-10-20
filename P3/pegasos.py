@@ -73,7 +73,7 @@ def pegasos_test(Xtest, ytest, w_l):
     - w_l: a numpy array of D elements as a D-dimension vector, which is the weight vector of SVM classifier and learned by pegasos_train()
  
     Returns:
-    - test_acc: testing accuracy.w_t12
+    - test_acc: testing accuracy.
     """
     # you need to fill in your solution here
 
