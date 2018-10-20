@@ -15,7 +15,9 @@ def objective_function(X, y, w, lamb):
     - obj_value: the value of objective function in SVM primal formulation
     """
     # you need to fill in your solution here
-
+    z = 1 - np.multiply(y, X @ w)
+    z = z * (z > 0).astype(float)
+    obj_value = lamb / 2 * np.linalg.norm(w) + (1 / np.size(X, 0) * np.sum(z))
 
     return obj_value
 
@@ -47,7 +49,17 @@ def pegasos_train(Xtrain, ytrain, w, lamb, k, max_iterations):
         A_t = np.floor(np.random.rand(k) * N).astype(int)  # index of the current mini-batch
 
         # you need to fill in your solution here
-
+        w = w.T
+        A_tX = Xtrain[A_t]
+        A_ty = ytrain[A_t]
+        z = np.multiply(ytrain[A_t], np.transpose(Xtrain[A_t] @ w.T))
+        A_tplusX = A_tX[np.where(z < 1)[1], :]
+        A_tplusy = A_ty[np.where(z < 1)[1]]
+        eta_t = 1 / lamb / iter
+        w_t12 = (1 - eta_t * lamb) * w + (eta_t / k * np.sum(A_tplusX * A_tplusy[:, np.newaxis], axis=0))
+        w = np.min([1, 1 / np.sqrt(lamb)/np.linalg.norm(w_t12)]) * w_t12
+        w = w.T
+        train_obj.append(objective_function(Xtrain, ytrain, w, lamb))
 
     return w, train_obj
 
@@ -61,11 +73,16 @@ def pegasos_test(Xtest, ytest, w_l):
     - w_l: a numpy array of D elements as a D-dimension vector, which is the weight vector of SVM classifier and learned by pegasos_train()
  
     Returns:
-    - test_acc: testing accuracy.
+    - test_acc: testing accuracy.w_t12
     """
     # you need to fill in your solution here
 
-
+    ypred = Xtest @ w_l
+    ypred = ypred.T
+    ypred[ypred > 0] = 1
+    ypred[ypred <= 0] = -1
+    ytest = np.asarray(ytest)
+    test_acc = np.sum(ytest == ypred).astype(float) / len(ytest)
     return test_acc
 
 

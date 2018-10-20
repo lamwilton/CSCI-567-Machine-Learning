@@ -32,7 +32,7 @@ class DecisionTree(Classifier):
 		print(name + '{')
 		
 		string = ''
-		for idx_cls in node.num_cls:
+		for idx_cls in range(node.num_cls):		# Error by CP corrected
 			string += str(node.labels.count(idx_cls)) + ' '
 		print(indent + ' num of sample / cls: ' + string)
 
@@ -88,23 +88,55 @@ class TreeNode(object):
 			########################################################
 			# TODO: compute the conditional entropy
 			########################################################
-			
+			branches = np.asarray(branches)
+			branches = branches[:, ~np.all(branches == 0, axis=0)] 		# remove zero columns
+			B = branches.shape[1]
+			C = branches.shape[0]
+			P = branches / np.sum(branches, axis=0)
+			ent = np.zeros(B)
+			for b in range(0, B):
+				ent[b] = np.array([-(P[i, b] * np.log2(P[i, b]) if P[i, b] != 0 else 0) for i in range(0, C)]).sum()
+			ce = np.multiply(np.sum(branches, axis=0), ent).sum() / np.sum(branches)
+			return ce
+
+
 		
 		for idx_dim in range(len(self.features[0])):
 		############################################################
 		# TODO: compare each split using conditional entropy
 		#       find the best split
 		############################################################
+			rubbish = 0
 
-
-
+		X = np.asarray(self.features).astype(int)
+		X = X - np.min(X)		# change features start from zero
+		y = np.asarray(self.labels)
+		ce = np.zeros(X.shape[1])
+		for d in range(0, X.shape[1]):		# get conditional entropy for each feature
+			bran = np.zeros([np.max(y)+1, np.max(X)+1])
+			for c in np.unique(y):
+				xtemp = X[y == c]
+				boo = np.bincount(xtemp[:, d])
+				bran[c, :] = np.pad(boo, (0, np.unique(X).shape[0] - boo.shape[0]), 'constant')		# zero pad
+			ce[d] = conditional_entropy(bran)
+		self.dim_split = np.argmin(ce)
+		self.feature_uniq_split = np.unique(X[:, self.dim_split]).tolist()
 
 		############################################################
 		# TODO: split the node, add child nodes
 		############################################################
+		Xnew = X[:, self.dim_split]
+		Xf = np.unique(Xnew)
+		for n in range(0, np.unique(X[:, self.dim_split]).shape[0]):
+			f = X[Xnew == Xf[n], :]
+			if len(f) != 0:
+				l = y[Xnew == Xf[n]]
+				num = np.unique(l).shape[0]
+				self.children.append(TreeNode(f.tolist(), l.tolist(), num))
 
-
-
+		for child in self.children:
+			if np.all(np.all(np.asarray(child.features) == np.asarray(child.features)[0,:], axis = 1)) == True:
+				child.splittable = False
 
 		# split the child nodes
 		for child in self.children:
