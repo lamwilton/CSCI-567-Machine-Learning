@@ -23,4 +23,14 @@ class DecisionStump(Classifier):
 		##################################################
 		# TODO: implement "predict"
 		##################################################
-		
+		features = np.asarray(features)
+		if np.ndim(features) == 1:
+			features = np.expand_dims(features, axis=0)
+		N = features.shape[0]
+		pred = np.zeros(N)
+		for n in range(0, N):
+			if features[n, self.d] > self.b:
+				pred[n] = self.s
+			else:
+				pred[n] = - self.s
+		return pred.tolist()

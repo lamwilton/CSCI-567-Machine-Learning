@@ -109,6 +109,8 @@ class TreeNode(object):
 			rubbish = 0
 
 		X = np.asarray(self.features).astype(int)
+		if np.ndim(X) == 1:
+			X = np.expand_dims(X, axis=0)
 		X = X - np.min(X)		# change features start from zero
 		y = np.asarray(self.labels)
 		ce = np.zeros(X.shape[1])
