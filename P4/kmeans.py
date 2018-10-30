@@ -43,21 +43,19 @@ class KMeans():
         J = 10^10
         for iter in range(self.max_iter):
             r_ik = np.zeros([N, K])
-            for i in range(0, N):
-                r_ik_index = np.argmin(np.linalg.norm(mu_k - x[i], axis=1))     # Append 1 to argmin k
-                r_ik[i, r_ik_index] = 1
-            J_newi = np.zeros(N)
-            for i in range(0, N):
-                J_newi[i] = np.array([r_ik[i, k] * np.linalg.norm(mu_k[k] - x[i]) for k in range(K)]).sum()
-            J_new = J_newi.sum() / N
+            dists = np.zeros([N, K])
+            for k in range(K):
+                dists[:, k] = np.square(np.linalg.norm(mu_k[k, :] - x, axis=1))     # dists = ||mu_k - x_i|| ^2
+            r_ik[np.arange(N), np.argmin(dists, axis=1)] = 1        # Update r_ik to 1 for closest distance
+            J_new = np.multiply(r_ik, dists).sum() / N
             if np.absolute(J - J_new) < self.e:
                 number_of_updates = iter
                 break    # STOP
             J = J_new
             for k in range(0, K):
                 if r_ik[:, k].sum() != 0:   # Do not update if points assigned to a cluster
-                    mu_k[k] = np.array([r_ik[i, k] * x[i, :] for i in range(N)]).sum(axis=0) / np.array([r_ik[i, k]  for i in range(N)]).sum()
-        y = np.array([np.argmin(np.linalg.norm(mu_k - x[i], axis=1)) for i in range(N)])
+                    mu_k[k] = np.multiply(r_ik[:, k].T, x.T).T.sum(axis=0) / r_ik[:, k].sum()   # Have to transpose twice for broadcasting rules
+        y = np.argmin(dists, axis=1)
         return mu_k, y, number_of_updates
         #raise Exception(
         #    'Implement fit function in KMeans class (filename: kmeans.py)')

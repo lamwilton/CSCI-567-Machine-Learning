@@ -31,8 +31,16 @@ def transform_image(image, code_vectors):
     # - implement the function
 
     # DONOT CHANGE CODE ABOVE THIS LINE
-    raise Exception(
-        'Implement transform_image function (filename:kmeansTest.py)')
+    #raise Exception(
+    #    'Implement transform_image function (filename:kmeansTest.py)')
+    new_im = np.zeros(image.shape)
+    K = code_vectors.shape[0]
+    dists = np.zeros([image.shape[0], image.shape[1], K])
+    assign = np.zeros([image.shape[0], image.shape[1]])
+    for k in range(K):
+        dists[:, :, k] = np.square(np.linalg.norm(image - code_vectors[k, :], axis=2))  # compute distances (N x N x K)
+    assign = np.argmin(dists, axis=2)   # Assign closest distances (N x N)
+    new_im = code_vectors[assign, :]    # Use centroids with assignment to generate new image (N x N x 3)
     # DONOT CHANGE CODE BELOW THIS LINE
     return new_im
 
