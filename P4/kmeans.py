@@ -17,7 +17,7 @@ class KMeans():
         self.e = e
 
     def fit(self, x):
-       '''
+        '''
             Finds n_cluster in the data x
             params:
                 x - N X D numpy array
@@ -37,8 +37,30 @@ class KMeans():
         # - return (means, membership, number_of_updates)
 
         # DONOT CHANGE CODE ABOVE THIS LINE
-        raise Exception(
-            'Implement fit function in KMeans class (filename: kmeans.py)')
+        K = self.n_cluster
+        mu_k = np.zeros([K, D])
+        mu_k = x[np.random.choice(N, K, replace=True), :]
+        J = 10^10
+        for iter in range(self.max_iter):
+            r_ik = np.zeros([N, K])
+            for i in range(0, N):
+                r_ik_index = np.argmin(np.linalg.norm(mu_k - x[i], axis=1))     # Append 1 to argmin k
+                r_ik[i, r_ik_index] = 1
+            J_newi = np.zeros(N)
+            for i in range(0, N):
+                J_newi[i] = np.array([r_ik[i, k] * np.linalg.norm(mu_k[k] - x[i]) for k in range(K)]).sum()
+            J_new = J_newi.sum() / N
+            if np.absolute(J - J_new) < self.e:
+                number_of_updates = iter
+                break    # STOP
+            J = J_new
+            for k in range(0, K):
+                if r_ik[:, k].sum() != 0:   # Do not update if points assigned to a cluster
+                    mu_k[k] = np.array([r_ik[i, k] * x[i, :] for i in range(N)]).sum(axis=0) / np.array([r_ik[i, k]  for i in range(N)]).sum()
+        y = np.array([np.argmin(np.linalg.norm(mu_k - x[i], axis=1)) for i in range(N)])
+        return mu_k, y, number_of_updates
+        #raise Exception(
+        #    'Implement fit function in KMeans class (filename: kmeans.py)')
         # DONOT CHANGE CODE BELOW THIS LINE
 
 class KMeansClassifier():
