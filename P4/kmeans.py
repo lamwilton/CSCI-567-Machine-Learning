@@ -103,9 +103,14 @@ class KMeansClassifier():
         # - assign labels to centroid_labels
 
         # DONOT CHANGE CODE ABOVE THIS LINE
-        raise Exception(
-            'Implement fit function in KMeansClassifier class (filename: kmeans.py)')
-
+        #raise Exception(
+        #    'Implement fit function in KMeansClassifier class (filename: kmeans.py)')
+        K = self.n_cluster
+        centroid_labels = np.zeros(K)
+        centroids, assign, i = KMeans.fit(self, x)
+        for k in range(K):
+            votes = y[np.nonzero(assign == k)]      # Find what label each cluster votes for
+            centroid_labels[k] = np.bincount(votes).argmax()
         # DONOT CHANGE CODE BELOW THIS LINE
 
         self.centroid_labels = centroid_labels
@@ -137,8 +142,16 @@ class KMeansClassifier():
         # - return labels
 
         # DONOT CHANGE CODE ABOVE THIS LINE
-        raise Exception(
-            'Implement predict function in KMeansClassifier class (filename: kmeans.py)')
+        #raise Exception(
+        #    'Implement predict function in KMeansClassifier class (filename: kmeans.py)')
+        K = self.n_cluster
+        dists = np.zeros([N, K])
+        assignment = np.zeros(N)
+        labels = np.zeros(N)
+        for k in range(K):
+            dists[:, k] = np.square(np.linalg.norm(x - self.centroids[k], axis=1))  # Compute distances for all centroids
+        assignment = np.argmin(dists, axis=1)
+        labels = self.centroid_labels[assignment]
         # DONOT CHANGE CODE BELOW THIS LINE
         return labels
 
