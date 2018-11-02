@@ -47,8 +47,23 @@ class GMM():
             # - compute variance and pi_k (see P4.pdf)
 
             # DONOT MODIFY CODE ABOVE THIS LINE
-            raise Exception(
-                'Implement initialization of variances, means, pi_k using k-means')
+            K = self.n_cluster
+            mu_k, assign, _ = KMeans.fit(self, x)
+            gamma_ik = np.zeros([N, K])
+            gamma_ik[np.arange(N), assign[np.arange(N)]] = 1
+            N_k = gamma_ik.sum(axis=0)
+            #N_k = np.unique(assign, return_counts=True)[1]
+            sigma_k = np.zeros([K, D, D])
+            for k in range(K):
+                boo = x - mu_k[k]   # eq 7 x_i - mu_k vectorized
+                sigma_k[k, :, :] = np.array([gamma_ik[i, k] * np.outer(boo[i], boo[i]) for i in range(N)]).sum(axis=0) / N_k[k]
+            pi_k = np.zeros(K)
+            pi_k = N_k / N
+            self.means = mu_k
+            self.variances = sigma_k
+            self.pi_k = pi_k
+            #raise Exception(
+            #    'Implement initialization of variances, means, pi_k using k-means')
             # DONOT MODIFY CODE BELOW THIS LINE
 
         elif (self.init == 'random'):
@@ -58,8 +73,20 @@ class GMM():
             # - initialize variance to be identity and pi_k to be uniform
 
             # DONOT MODIFY CODE ABOVE THIS LINE
-            raise Exception(
-                'Implement initialization of variances, means, pi_k randomly')
+            K = self.n_cluster
+            mu_k = np.random.rand(K, D)
+            sigma_k = np.zeros([K, D, D])
+            sigma_k[np.arange(K), :, :] = np.eye(D)
+            pi_k = np.zeros(K)
+            pi_k[:] = 1 / K
+            N_k = np.zeros(K)
+            N_k[:] = N / K
+            self.means = mu_k
+            self.variances = sigma_k
+            self.pi_k = pi_k
+            gamma_ik = np.zeros([N, K])
+            #raise Exception(
+            #    'Implement initialization of variances, means, pi_k randomly')
             # DONOT MODIFY CODE BELOW THIS LINE
 
         else:
@@ -72,7 +99,36 @@ class GMM():
         # - Return the number of E/M-Steps executed (Int) 
         # Hint: Try to separate E & M step for clarity
         # DONOT MODIFY CODE ABOVE THIS LINE
-        raise Exception('Implement fit function (filename: gmm.py)')
+        l = GMM.compute_log_likelihood(self, x)
+        means = self.means
+        variances = self.variances
+        pi_k = self.pi_k
+
+        for iter in range(self.max_iter):
+            # E step
+            Normal = np.array(
+                [[GMM.Gaussian_pdf(means[k], variances[k, :, :]).getLikelihood(x[i, :]) for k in range(K)] for i in
+                 range(N)])
+            gamma_ik = ((pi_k * Normal).T / (pi_k * Normal).sum(axis=1).T).T    # E step eq 4
+            # M Step
+            N_k = gamma_ik.sum(axis=0)
+            for k in range(K):
+                means[k] = np.multiply(x.T, gamma_ik[:, k]).sum(axis=1) / N_k[k]        # eq 6
+            for k in range(K):
+                boo = x - means[k]  # eq 7 x_i - mu_k vectorized
+                variances[k, :, :] = np.array([gamma_ik[i, k] * np.outer(boo[i], boo[i]) for i in range(N)]).sum(
+                    axis=0) / N_k[k]
+            pi_k = N_k / N
+            l_new = GMM.compute_log_likelihood(self, x)
+            if np.absolute(l - l_new) < self.e:
+                number_of_updates = iter
+                break    # STOP
+            l = l_new
+        self.means = means
+        self.variances = variances
+        self.pi_k = pi_k
+        return number_of_updates
+        #raise Exception('Implement fit function (filename: gmm.py)')
         # DONOT MODIFY CODE BELOW THIS LINE
 
 		
@@ -119,7 +175,31 @@ class GMM():
         # - return the log-likelihood (Float)
         # Note: you can call this function in fit function (if required)
         # DONOT MODIFY CODE ABOVE THIS LINE
-        raise Exception('Implement compute_log_likelihood function in gmm.py')
+        N, D = x.shape
+        K = self.n_cluster
+        exps = np.zeros(K)
+        const = np.zeros(K)
+        normal = np.zeros(K)
+        sumnormal = np.zeros(N)
+        '''
+        for i in range(N):
+            for k in range(K):
+                boo = x - means[k]  # eq 9 x_i - mu_k vectorized
+                exps[k] = np.exp((boo[i].T @ np.linalg.inv(variances[k, :, :] + np.eye(D) * 0.001) @ boo[i]) / -2)
+                const[k] = pi_k[k]  / np.sqrt(((2 * np.pi) ** D) * np.linalg.det(variances[k, :, :]+ np.eye(D) * 0.001))
+                normal[k] = exps[k] * const[k]
+            sumnormal[i] = normal.sum()
+        log_likelihood = np.log(sumnormal[np.arange(K)]).sum()
+        '''
+        
+        for i in range(N):
+            for k in range(K):
+                normal[k] = pi_k[k] * GMM.Gaussian_pdf(means[k], variances[k, :, :]).getLikelihood(x[i, :])     # normal = pi_k * Normal function
+            sumnormal[i] = normal.sum()
+        log_likelihood = np.log(sumnormal[np.arange(N)]).sum().item()
+
+        #raise Exception('Implement compute_log_likelihood function in gmm.py')
+
         # DONOT MODIFY CODE BELOW THIS LINE
         return log_likelihood
 
@@ -142,7 +222,11 @@ class GMM():
             # - Set self.c equal to ((2pi)^D) * det(variance) (after ensuring the variance matrix is full rank)
             # Note you can call this class in compute_log_likelihood and fit
             # DONOT MODIFY CODE ABOVE THIS LINE
-            raise Exception('Impliment Guassian_pdf __init__')
+            D = np.shape(self.variance)[0]
+            self.variance = (np.linalg.matrix_rank(variance[:, :]) < D).astype(int) * np.eye(D) * 0.001 + self.variance
+            self.inv = np.linalg.inv(self.variance)
+            self.c = ((2 * np.pi) ** D) * np.linalg.det(self.variance)
+            #raise Exception('Impliment Guassian_pdf __init__')
             # DONOT MODIFY CODE BELOW THIS LINE
 
         def getLikelihood(self,x):
@@ -160,6 +244,12 @@ class GMM():
             # - Calculate the likelihood of sample x generated by this Gaussian
             # Note: use the described implementation of a Gaussian to ensure compatibility with the solutions
             # DONOT MODIFY CODE ABOVE THIS LINE
-            raise Exception('Impliment Guassian_pdf getLikelihood')
+            mean = self.mean
+            inv = self.inv
+            c = self.c
+            boo = x - mean
+            p = np.exp(-0.5 * boo.T @ inv @ boo)/np.sqrt(c)
+
+            #raise Exception('Impliment Guassian_pdf getLikelihood')
             # DONOT MODIFY CODE BELOW THIS LINE
             return p
