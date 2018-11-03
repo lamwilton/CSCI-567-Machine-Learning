@@ -52,7 +52,6 @@ class GMM():
             gamma_ik = np.zeros([N, K])
             gamma_ik[np.arange(N), assign[np.arange(N)]] = 1
             N_k = gamma_ik.sum(axis=0)
-            #N_k = np.unique(assign, return_counts=True)[1]
             sigma_k = np.zeros([K, D, D])
             for k in range(K):
                 boo = x - mu_k[k]   # eq 7 x_i - mu_k vectorized
@@ -106,9 +105,11 @@ class GMM():
 
         for iter in range(self.max_iter):
             # E step
-            Normal = np.array(
-                [[GMM.Gaussian_pdf(means[k], variances[k, :, :]).getLikelihood(x[i, :]) for k in range(K)] for i in
-                 range(N)])
+            # Avoid looping the instance and invert the matrix 1000 times by create k instances first
+            inst = []
+            for k in range(K):
+                inst.append(GMM.Gaussian_pdf(means[k], variances[k, :, :]))
+            Normal = np.array([[inst[k].getLikelihood(x[i, :]) for k in range(K)] for i in range(N)])
             gamma_ik = ((pi_k * Normal).T / (pi_k * Normal).sum(axis=1).T).T    # E step eq 4
             # M Step
             N_k = gamma_ik.sum(axis=0)
@@ -151,7 +152,13 @@ class GMM():
         # - return the samples
 
         # DONOT MODIFY CODE ABOVE THIS LINE
-        raise Exception('Implement sample function in gmm.py')
+        K = self.pi_k.shape[0]
+        D = self.means.shape[1]
+        k = np.random.choice(K, N, p=self.pi_k)
+        samples = np.zeros([N, D])
+        for n in range(N):
+            samples[n, :] = np.random.multivariate_normal(self.means[k[n], :], self.variances[k[n], :, :])
+        #raise Exception('Implement sample function in gmm.py')
         # DONOT MODIFY CODE BELOW THIS LINE
         return samples        
 
@@ -177,25 +184,17 @@ class GMM():
         # DONOT MODIFY CODE ABOVE THIS LINE
         N, D = x.shape
         K = self.n_cluster
-        exps = np.zeros(K)
-        const = np.zeros(K)
-        normal = np.zeros(K)
+        normal = np.zeros([N, K])
         sumnormal = np.zeros(N)
-        '''
+
+        inst = []
+        for k in range(K):
+            inst.append(GMM.Gaussian_pdf(means[k], variances[k, :, :]))
         for i in range(N):
             for k in range(K):
-                boo = x - means[k]  # eq 9 x_i - mu_k vectorized
-                exps[k] = np.exp((boo[i].T @ np.linalg.inv(variances[k, :, :] + np.eye(D) * 0.001) @ boo[i]) / -2)
-                const[k] = pi_k[k]  / np.sqrt(((2 * np.pi) ** D) * np.linalg.det(variances[k, :, :]+ np.eye(D) * 0.001))
-                normal[k] = exps[k] * const[k]
-            sumnormal[i] = normal.sum()
-        log_likelihood = np.log(sumnormal[np.arange(K)]).sum()
-        '''
-        
-        for i in range(N):
-            for k in range(K):
-                normal[k] = pi_k[k] * GMM.Gaussian_pdf(means[k], variances[k, :, :]).getLikelihood(x[i, :])     # normal = pi_k * Normal function
-            sumnormal[i] = normal.sum()
+                normal[i, k] = pi_k[k] * inst[k].getLikelihood(x[i, :])     # normal = pi_k * Normal function
+        sumnormal = normal.sum(axis=1)
+
         log_likelihood = np.log(sumnormal[np.arange(N)]).sum().item()
 
         #raise Exception('Implement compute_log_likelihood function in gmm.py')
@@ -248,7 +247,7 @@ class GMM():
             inv = self.inv
             c = self.c
             boo = x - mean
-            p = np.exp(-0.5 * boo.T @ inv @ boo)/np.sqrt(c)
+            p = np.exp(- 0.5 * boo.T @ inv @ boo) / np.sqrt(c)
 
             #raise Exception('Impliment Guassian_pdf getLikelihood')
             # DONOT MODIFY CODE BELOW THIS LINE
