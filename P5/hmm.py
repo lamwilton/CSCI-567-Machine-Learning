@@ -22,7 +22,9 @@ def forward(pi, A, B, O):
   ###################################################
   # Q3.1 Edit here
   ###################################################
-
+  alpha[:, 0] = np.multiply(pi, B[:, O[0]])
+  for t in range(1, N):
+    alpha[:, t] = B[:, O[t]] * np.multiply(A.T, alpha[:, t - 1]).sum(axis=1)
   return alpha
 
 
@@ -45,7 +47,10 @@ def backward(pi, A, B, O):
   ###################################################
   # Q3.1 Edit here
   ###################################################
-  
+  beta[:, N-1] = 1
+  for t in range(N-2, -1, -1):
+    bb = np.multiply(B[:, O[t+1]], beta[:, t+1])
+    beta[:, t] = np.multiply(A, bb).sum(axis=1)
   return beta
 
 def seqprob_forward(alpha):
@@ -62,7 +67,8 @@ def seqprob_forward(alpha):
   ###################################################
   # Q3.2 Edit here
   ###################################################
-  
+  t = alpha.shape[1] - 1
+  prob = alpha[:, t].sum()
   return prob
 
 
@@ -84,7 +90,8 @@ def seqprob_backward(beta, pi, B, O):
   ###################################################
   # Q3.2 Edit here
   ###################################################
-  
+  alpha1 = np.multiply(pi, B[:, O[0]])
+  prob = np.multiply(beta[:, 0], alpha1).sum()
   return prob
 
 def viterbi(pi, A, B, O):
@@ -104,7 +111,28 @@ def viterbi(pi, A, B, O):
   ###################################################
   # Q3.3 Edit here
   ###################################################
-  
+  '''
+  pi = np.array([0.6,0.4])
+  B = np.array([[0.5,0.4], [0.1, 0.3]])
+  A= np.array([[0.7,0.3], [0.4,0.6]])
+  O = np.array([0,1])
+  '''
+  S = len(pi)
+  N = len(O)
+  delta = np.zeros([S, N])
+  Delta = np.zeros([S, N])
+  path = np.zeros(N)
+  delta[:, 0] = np.multiply(pi, B[:, O[0]])
+  for t in range(1, N):
+    adelta = np.multiply(A.T, delta[:, t - 1])
+    maxs = np.amax(adelta, axis=1)
+    delta[:, t] = np.multiply(B[:, O[t]], maxs)
+    Delta[:, t] = np.argmax(adelta, axis=1)
+  path[N-1] = np.argmax(delta[:, N-1])
+  for t in range(N-1, 0, -1):
+    path[t-1] = Delta[path[t].astype(int), t]
+  path = path.astype(int)
+  path = path.tolist()
   return path
 
 
